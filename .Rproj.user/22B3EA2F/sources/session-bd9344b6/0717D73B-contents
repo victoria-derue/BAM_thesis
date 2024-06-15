@@ -1,0 +1,70 @@
+# Load necessary libraries
+library(tidyverse)
+
+# File paths
+file1 <- "C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - mett.csv"
+file2 <- "C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - rappam.csv"
+file3 <- "C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - sop.csv"
+
+# Read CSV files
+data1 <- read.csv(file1, stringsAsFactors = FALSE)
+data2 <- read.csv(file2, stringsAsFactors = FALSE)
+data3 <- read.csv(file3, stringsAsFactors = FALSE)
+
+# Combine into a single data frame
+all_data <- bind_rows(data1, data2, data3)
+
+data1$ISSN <- as.character(data1$ISSN)  # Assuming data2$ISSN is integer
+data2$ISSN <- as.character(data2$ISSN)  # Assuming data2$ISSN is integer
+data3$ISSN <- as.character(data3$ISSN)  # Assuming data3$ISSN is integer
+
+# Convert abstracts to a Corpus (text document collection) for text mining
+corpus <- Corpus(VectorSource(all_data$Abstract))
+
+# Text preprocessing
+corpus <- tm_map(corpus, content_transformer(tolower))  # Convert to lowercase
+corpus <- tm_map(corpus, removePunctuation)            # Remove punctuation
+corpus <- tm_map(corpus, removeNumbers)                # Remove numbers
+corpus <- tm_map(corpus, removeWords, stopwords("english"))  # Remove stopwords
+corpus <- tm_map(corpus, stripWhitespace)              # Remove extra white spaces
+
+# Stemming (reducing words to their root form)
+corpus <- tm_map(corpus, stemDocument)
+
+# Create a term-document matrix with N-grams
+dtm <- DocumentTermMatrix(corpus,
+                          control = list(tokenize = NGramTokenizer,
+                                         tokenizer = function(x) NGramTokenizer(x, Weka_control(min = 1, max = 3))))
+
+word_freq <- colSums(as.matrix(dtm))
+
+# Convert to data frame for easier manipulation
+word_freq_df <- data.frame(word = names(word_freq), freq = word_freq, row.names = NULL)
+
+# Sort words by frequency in descending order
+word_freq_df <- word_freq_df %>% arrange(desc(freq))
+
+library(ggplot2)
+
+# Number of top words to visualize
+top_n <- 20
+
+# Plot top N words by frequency
+word_freq_df %>%
+  slice_head(n = top_n) %>%
+  ggplot(aes(x = reorder(word, freq), y = freq)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 20 Words by Frequency", x = "Words", y = "Frequency") +
+  theme_minimal()
+
+
+# Compute Euclidean distances
+dist_matrix <- dist(as.matrix(dtm))
+
+# Perform hierarchical clustering with Ward's method
+hc <- hclust(dist_matrix, method = "ward.D")
+
+# Plot dendrogram to visualize clusters
+plot(hc, hang = -1, main = "Hierarchical Clustering Dendrogram")
+

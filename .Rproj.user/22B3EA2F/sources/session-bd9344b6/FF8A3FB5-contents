@@ -1,0 +1,12 @@
+library(bibliometrix)
+library(tm)
+
+scopus_search_mett <- read_csv("C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - mett.csv")
+scopus_search_rappam <- read_csv("C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - rappam.csv")
+scopus_search_sop <- read_csv("C:/Users/derue/Documents/BAM/Thesis/Codes/scopus - sop.csv")
+
+scopus_search <- rbind(scopus_search_mett, scopus_search_rappam, scopus_search_sop)
+
+M <- convert2df(file = scopus_search, dbsource = "scopus", format = "csv")
+
+biblio <- convert2df(scopus_search, dbsource = "scopus")
